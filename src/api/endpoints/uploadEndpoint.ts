@@ -3,6 +3,8 @@ import type {
   UploadMediaRequest,
   TranscribedMediaDtoPagedResponseDto,
   GetTranscribedMediaRequest,
+  MediaStatusResponse,
+  GetAllMediaResponse,
 } from "../types/models";
 
 /**
@@ -30,16 +32,17 @@ export const uploadMedia = async ({
  * Gets the status of an upload.
  * GET /api/Upload/{id}/status
  */
-export const getUploadStatus = async (id: string): Promise<void> => {
+export const getUploadStatus = async (
+  id: string,
+): Promise<MediaStatusResponse> => {
   const response = await uploadApi.get(`/Upload/${id}/status`);
   return response.data;
 };
 
 /**
  * Gets all media.
- * GET /api/Upload/GetAllMedia
  */
-export const getAllMedia = async (): Promise<void> => {
+export const getAllMedia = async (): Promise<GetAllMediaResponse> => {
   const response = await uploadApi.get("/Upload/GetAllMedia");
   return response.data;
 };
@@ -49,7 +52,7 @@ export const getAllMedia = async (): Promise<void> => {
  * GET /api/Upload/transcribed
  */
 export const getTranscribedMedia = async (
-  params: GetTranscribedMediaRequest
+  params: GetTranscribedMediaRequest,
 ): Promise<TranscribedMediaDtoPagedResponseDto> => {
   const response = await uploadApi.get("/Upload/transcribed", {
     params,
