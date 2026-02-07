@@ -11,6 +11,7 @@ import {
   getUploadStatus,
   getAllMedia,
   getTranscribedMedia,
+  getTranscribedMediaById,
 } from "../api/endpoints/uploadEndpoint";
 import type {
   UploadMediaRequest,
@@ -18,6 +19,7 @@ import type {
   GetAllMediaResponse,
   GetTranscribedMediaRequest,
   TranscribedMediaDtoPagedResponseDto,
+  TranscribedMediaDto,
 } from "../api/types/models";
 
 export const mediaKeys = {
@@ -29,6 +31,8 @@ export const mediaKeys = {
   status: (id: string) => [...mediaKeys.detail(id), "status"] as const,
   transcribed: (params: GetTranscribedMediaRequest) =>
     [...mediaKeys.all, "transcribed", params] as const,
+  transcribedDetail: (id: string) =>
+    [...mediaKeys.all, "transcribed", id] as const,
 };
 
 export const useUploadMedia = (
@@ -44,6 +48,43 @@ export const useUploadMedia = (
       options?.onSuccess?.(...args);
     },
     ...options,
+  });
+};
+
+export const useTranscribedMediaById = (
+  id: string,
+  options?: Omit<
+    UseQueryOptions<TranscribedMediaDto, Error>,
+    "queryKey" | "queryFn"
+  >,
+) => {
+  return useQuery({
+    queryKey: mediaKeys.transcribedDetail(id),
+    queryFn: () => getTranscribedMediaById(id),
+    enabled: !!id,
+    ...options,
+  });
+};
+
+export const useRefreshMediaStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const status = await getUploadStatus(id);
+      return { id, status };
+    },
+    onSuccess: ({ id, status }) => {
+      queryClient.setQueryData(
+        mediaKeys.lists(),
+        (oldData: GetAllMediaResponse | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map((item) =>
+            item.id === id ? { ...item, status } : item,
+          );
+        },
+      );
+    },
   });
 };
 

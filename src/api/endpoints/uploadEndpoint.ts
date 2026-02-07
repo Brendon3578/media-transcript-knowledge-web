@@ -5,6 +5,7 @@ import type {
   GetTranscribedMediaRequest,
   MediaStatusResponse,
   GetAllMediaResponse,
+  TranscribedMediaDto,
 } from "../types/models";
 
 /**
@@ -25,6 +26,17 @@ export const uploadMedia = async ({
     },
   });
 
+  return response.data;
+};
+
+/**
+ * Gets transcribed media by id.
+ * GET /api/Upload/transcribed/{id}
+ */
+export const getTranscribedMediaById = async (
+  id: string,
+): Promise<TranscribedMediaDto> => {
+  const response = await uploadApi.get(`/Upload/transcribed/${id}`);
   return response.data;
 };
 

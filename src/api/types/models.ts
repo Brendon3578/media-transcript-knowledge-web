@@ -3,7 +3,10 @@ export type UploadMediaResponse = void;
 export interface MediaItem {
   id: string;
   fileName: string;
+  contentType: string;
+  fileSizeBytes: number;
   status: number | string;
+  durationSeconds?: number;
   createdAt: string;
 }
 
