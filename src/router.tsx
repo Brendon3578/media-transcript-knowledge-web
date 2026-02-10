@@ -3,6 +3,7 @@ import MainLayout from "./components/MainLayout";
 import UploadPage from "./pages/UploadPage";
 import LibraryPage from "./pages/LibraryPage";
 import SearchPage from "./pages/SearchPage";
+import MediaPage from "./pages/MediaPage";
 
 export const router = createBrowserRouter([
   {
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
       {
         path: "library",
         element: <LibraryPage />,
+      },
+      {
+        path: "media/:id",
+        element: <MediaPage />,
       },
       {
         path: "search",

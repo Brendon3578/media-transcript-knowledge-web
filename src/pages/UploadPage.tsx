@@ -41,14 +41,16 @@ interface FileWithStatus {
 }
 
 const TRANSCRIPTION_MODELS = [
-  { value: "whisper-small", label: "Whisper Small" },
-  { value: "whisper-medium", label: "Whisper Medium" },
-  { value: "whisper-large", label: "Whisper Large" },
+  { value: "tiny", label: "Whisper Tiny" },
+  { value: "small", label: "Whisper Small" },
+  { value: "base", label: "Whisper Base" },
+  { value: "medium", label: "Whisper Medium" },
+  { value: "large", label: "Whisper Large" },
 ];
 
 export default function UploadPage() {
   const [files, setFiles] = useState<FileWithStatus[]>([]);
-  const [model, setModel] = useState<string>("whisper-small");
+  const [model, setModel] = useState<string>("small");
   const uploadMutation = useUploadMedia();
 
   // Helper to format file size

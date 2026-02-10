@@ -12,11 +12,14 @@ export interface MediaItem {
 
 export type GetAllMediaResponse = MediaItem[];
 
-export type MediaStatusResponse =
-  | "uploaded"
-  | "processing"
-  | "transcribed"
-  | "failed";
+export interface MediaStatusResponse {
+  mediaId: string;
+  fileName: string;
+  status: string;
+  uploadedAt: string;
+  updatedAt: string;
+  model: string;
+}
 
 export interface TranscribedMediaItem {
   id: string;
@@ -64,7 +67,8 @@ export interface TranscribedMediaDto {
   duration: number;
   status?: string | null;
   transcriptionText?: string | null;
-  createdAt: string;
+  createdAt?: string | null;
+  model: string;
 }
 
 export interface TranscribedMediaDtoPagedResponseDto {

@@ -71,8 +71,8 @@ export const useRefreshMediaStatus = () => {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const status = await getUploadStatus(id);
-      return { id, status };
+      const response = await getUploadStatus(id);
+      return { id, status: response.status };
     },
     onSuccess: ({ id, status }) => {
       queryClient.setQueryData(
@@ -101,7 +101,7 @@ export const useUploadStatus = (
     enabled: !!id,
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data === "transcribed" || data === "failed") {
+      if (data?.status === "transcribed" || data?.status === "failed") {
         return false;
       }
       return 1000;
