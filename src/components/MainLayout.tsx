@@ -1,4 +1,4 @@
-import { Upload, Library, Search } from "lucide-react";
+import { Upload, Library, Search, Sparkles } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -29,9 +29,14 @@ export default function MainLayout() {
       {/* Sidebar */}
       <aside className="w-64 border-r bg-muted/40 hidden md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-            <NavLink to="/" className="flex items-center gap-2 font-semibold">
-              <span className="">Media RAG</span>
+          <div className="flex h-14 border-b px-4 lg:h-[60px] lg:px-6">
+            <NavLink to="/" className="flex h-16 items-center gap-2 ">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
+                <Sparkles className="h-4 w-4 text-accent-foreground" />
+              </div>
+              <span className="text-lg font-semibold text-sidebar-foreground">
+                MediaRAG
+              </span>
             </NavLink>
           </div>
           <div className="flex-1">
@@ -54,6 +59,14 @@ export default function MainLayout() {
                 </NavLink>
               ))}
             </nav>
+          </div>
+          <div className="border-t border-border p-4">
+            <div className="rounded-lg bg-sidebar-accent/50 p-4">
+              <p className="text-xs text-muted-foreground">
+                Upload media files and use AI-powered search to find relevant
+                content in your transcripts.
+              </p>
+            </div>
           </div>
         </div>
       </aside>
