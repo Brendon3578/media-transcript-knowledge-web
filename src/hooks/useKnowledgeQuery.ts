@@ -8,7 +8,7 @@ export const knowledgeKeys = {
     [...knowledgeKeys.all, "search", request] as const,
 };
 
-export const useKnowledgeQuery = (
+export const useSemanticSearch = (
   request: QueryRequest,
   options?: Omit<UseQueryOptions<QueryResponse, Error>, "queryKey" | "queryFn">,
 ) => {

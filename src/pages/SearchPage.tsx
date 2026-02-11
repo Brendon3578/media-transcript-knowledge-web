@@ -1,17 +1,16 @@
-import { useState, type KeyboardEvent } from "react";
-import { useKnowledgeQuery } from "../hooks/useKnowledgeQuery";
+import { useState, type KeyboardEvent, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useSemanticSearch } from "../hooks/useKnowledgeQuery";
 import { useTranscribedMedia } from "../hooks/useMedia";
-import type { QueryRequest, QuerySource } from "../api/types/models";
+import type { QueryRequest, QuerySource, TimeRange } from "../api/types/models";
 import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
-import { Input } from "../components/ui/input";
 import { Slider } from "../components/ui/slider";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "../components/ui/card";
 import {
   Collapsible,
@@ -21,30 +20,37 @@ import {
 import { Badge } from "../components/ui/badge";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Separator } from "../components/ui/separator";
-import { Textarea } from "../components/ui/textarea"; // Need to check if Textarea exists, otherwise use Input or standard textarea
+import { Textarea } from "../components/ui/textarea";
 import {
   Loader2,
   Search,
   Filter,
   ChevronDown,
   ChevronUp,
-  FileVideo,
   FileAudio,
   RotateCcw,
   X,
   Database,
   Clock,
-  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { TimeRangeSelector } from "../components/TimeRangeSelector";
+import { formatDuration } from "../lib/formatters";
 
 export default function SearchPage() {
+  const [searchParams] = useSearchParams();
+  const initialMediaId = searchParams.get("mediaId");
+
   // --- State ---
   const [question, setQuestion] = useState("");
-  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
-  const [startSeconds, setStartSeconds] = useState<string>(""); // Use string for input handling
-  const [endSeconds, setEndSeconds] = useState<string>("");
-  const [topK, setTopK] = useState([10]);
+  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>(
+    initialMediaId ? [initialMediaId] : [],
+  );
+  const [mediaTimeRanges, setMediaTimeRanges] = useState<
+    Record<string, { start: number; end: number }>
+  >({});
+  const [topK, setTopK] = useState([3]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   // The request object that triggers the query
@@ -57,6 +63,21 @@ export default function SearchPage() {
     pageSize: 100,
   });
 
+  // Reset time ranges when selection changes
+  useEffect(() => {
+    setMediaTimeRanges((prev) => {
+      const next = { ...prev };
+      // Remove keys that are no longer in selectedMediaIds
+      Object.keys(next).forEach((key) => {
+        if (!selectedMediaIds.includes(key)) {
+          delete next[key];
+        }
+      });
+
+      return next;
+    });
+  }, [selectedMediaIds]);
+
   // Main search query
   const {
     data: searchResults,
@@ -64,38 +85,46 @@ export default function SearchPage() {
     isError,
     error,
     refetch,
-  } = useKnowledgeQuery(activeRequest || { question: "", topK: 3 }, {
+  } = useSemanticSearch(activeRequest || { question: "" }, {
     enabled: !!activeRequest,
-    retry: false, // Don't retry automatically on 400/500 for search usually
+    retry: false,
   });
 
   // --- Handlers ---
   const handleSearch = () => {
     if (!question.trim()) return;
 
-    const filters = {
-      mediaIds: selectedMediaIds.length > 0 ? selectedMediaIds : [],
-      startSeconds: startSeconds ? Number(startSeconds) : undefined,
-      endSeconds: endSeconds ? Number(endSeconds) : undefined,
+    const timeRanges: TimeRange[] = [];
+
+    if (selectedMediaIds.length > 0) {
+      selectedMediaIds.forEach((id) => {
+        const range = mediaTimeRanges[id];
+        if (range) {
+          timeRanges.push({
+            mediaId: id,
+            startSeconds: range.start,
+            endSeconds: range.end,
+          });
+        } else {
+          timeRanges.push({ mediaId: id });
+        }
+      });
+    }
+
+    const request: QueryRequest = {
+      question: question.trim(),
+      topK: topK[0],
     };
 
-    // Clean up filters - remove keys if undefined/empty
-    // But our interface expects optional keys, so passing undefined is fine if the object structure matches.
-    // However, the prompt says "Only include filters in the query request if they are explicitly set".
-    // So if mediaIds is empty, maybe we shouldn't send it? Or send empty array?
-    // The interface QueryFilters has mediaIds as string[]. It's not optional in the interface definition provided earlier:
-    // export interface QueryFilters { mediaIds: string[]; startSeconds?: number; endSeconds?: number; }
-    // So we must pass mediaIds.
+    if (timeRanges.length > 0) {
+      request.timeRanges = timeRanges;
+    }
 
-    setActiveRequest({
-      question: question.trim(),
-      filters: {
-        mediaIds: selectedMediaIds,
-        ...(startSeconds ? { startSeconds: Number(startSeconds) } : {}),
-        ...(endSeconds ? { endSeconds: Number(endSeconds) } : {}),
-      },
-      topK: topK[0],
-    });
+    console.log(request);
+
+    return;
+
+    setActiveRequest(request);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -107,8 +136,7 @@ export default function SearchPage() {
 
   const handleClearFilters = () => {
     setSelectedMediaIds([]);
-    setStartSeconds("");
-    setEndSeconds("");
+    setMediaTimeRanges({});
     setTopK([3]);
   };
 
@@ -118,12 +146,20 @@ export default function SearchPage() {
     );
   };
 
-  // --- Render Helpers ---
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  const handleTimeRangeChange = (
+    mediaId: string,
+    start: number,
+    end: number,
+  ) => {
+    setMediaTimeRanges((prev) => ({
+      ...prev,
+      [mediaId]: { start, end },
+    }));
   };
+
+  // --- Render Helpers ---
+  // Helper to format time for display (reusing lib or local)
+  const formatTimeDisplay = (seconds: number) => formatDuration(seconds);
 
   return (
     <div className="container mx-auto p-4 max-w-6xl min-h-screen flex flex-col gap-6">
@@ -140,148 +176,9 @@ export default function SearchPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Panel: Filters */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 hover:bg-transparent font-semibold text-lg"
-                      >
-                        <Filter className="w-4 h-4 mr-2" />
-                        Filters
-                        {isFiltersOpen ? (
-                          <ChevronUp className="w-4 h-4 ml-2 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 ml-2 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                  </div>
-                  {/* Clear Filters Button */}
-                  {(selectedMediaIds.length > 0 ||
-                    startSeconds ||
-                    endSeconds ||
-                    topK[0] !== 3) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearFilters}
-                      className="h-8 px-2 text-xs"
-                    >
-                      <RotateCcw className="w-3 h-3 mr-1" />
-                      Reset
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CollapsibleContent>
-                <CardContent className="space-y-6 pt-0">
-                  {/* Top K Slider */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <label className="text-sm font-medium">
-                        Results (Top K)
-                      </label>
-                      <span className="text-sm text-muted-foreground">
-                        {topK[0]}
-                      </span>
-                    </div>
-                    <Slider
-                      value={topK}
-                      onValueChange={setTopK}
-                      max={25}
-                      min={1}
-                      step={1}
-                    />
-                  </div>
-
-                  <Separator />
-
-                  {/* Time Range */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium flex items-center gap-2">
-                      <Clock className="w-4 h-4" /> Time Range (s)
-                    </label>
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        placeholder="Start"
-                        type="number"
-                        value={startSeconds}
-                        onChange={(e) => setStartSeconds(e.target.value)}
-                        className="h-8 text-sm"
-                      />
-                      <span className="text-muted-foreground">-</span>
-                      <Input
-                        placeholder="End"
-                        type="number"
-                        value={endSeconds}
-                        onChange={(e) => setEndSeconds(e.target.value)}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Media Selection */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium">Source Media</label>
-                    {isMediaLoading ? (
-                      <div className="flex justify-center p-4">
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : (
-                      <ScrollArea className="h-[300px] pr-4">
-                        <div className="space-y-2">
-                          {mediaData?.items?.map((media) => (
-                            <div
-                              key={media.mediaId}
-                              className="flex items-start space-x-2"
-                            >
-                              <Checkbox
-                                id={media.mediaId}
-                                checked={selectedMediaIds.includes(
-                                  media.mediaId,
-                                )}
-                                onCheckedChange={() =>
-                                  toggleMediaSelection(media.mediaId)
-                                }
-                              />
-                              <label
-                                htmlFor={media.mediaId}
-                                className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer pt-0.5 break-all"
-                              >
-                                {media.fileName || "Untitled Media"}
-                                <div className="text-xs text-muted-foreground mt-0.5">
-                                  {media.model}
-                                </div>
-                              </label>
-                            </div>
-                          ))}
-                          {!mediaData?.items?.length && (
-                            <div className="text-sm text-muted-foreground italic">
-                              No media found.
-                            </div>
-                          )}
-                        </div>
-                      </ScrollArea>
-                    )}
-                  </div>
-                </CardContent>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
-        </div>
-
-        {/* Right Panel: Search & Results */}
-        <div className="lg:col-span-3 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Panel: Search & Results */}
+        <div className="lg:col-span-2 space-y-6">
           {/* Search Box */}
           <div className="relative">
             <Textarea
@@ -338,10 +235,10 @@ export default function SearchPage() {
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Answer Card */}
                 <Card className="border-primary/20 shadow-md">
-                  <CardHeader className="bg-primary/5 pb-4">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-primary text-primary-foreground">
-                        <Database className="w-4 h-4" />
+                  <CardHeader className="bg-primary/5">
+                    <CardTitle className="pt-2 my-0 text-lg flex items-center gap-2">
+                      <div className="p-2 rounded-md bg-primary text-primary-foreground">
+                        <Sparkles className="w-5 h-5" />
                       </div>
                       Answer
                     </CardTitle>
@@ -368,7 +265,7 @@ export default function SearchPage() {
                         <SourceItem
                           key={`${source.mediaId}-${index}`}
                           source={source}
-                          formatTime={formatTime}
+                          formatTime={formatTimeDisplay}
                         />
                       ))}
                     </div>
@@ -376,28 +273,187 @@ export default function SearchPage() {
                 )}
               </div>
             ) : (
-              /* Empty State */
-              <div className="flex flex-col items-center justify-center h-64 space-y-4 text-muted-foreground border-2 border-dashed rounded-lg bg-muted/20">
-                <Search className="w-12 h-12 opacity-20" />
-                <div className="text-center">
-                  <h3 className="font-semibold text-lg text-foreground">
-                    Ready to Search
+              <Card className="border-border bg-card">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+                    <Search className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold text-foreground">
+                    Ask anything about your media
                   </h3>
-                  <p className="max-w-sm mx-auto mt-1">
-                    Select media from the left and ask a question to get
-                    started.
+                  <p className="mt-2 max-w-md text-center text-muted-foreground">
+                    Type a question in natural language to search through your
+                    transcribed media content. The AI will find relevant
+                    segments and provide an answer with citations.
                   </p>
-                </div>
-              </div>
+                  <div className="mt-6 flex flex-wrap justify-center gap-2">
+                    {[
+                      "What were the key decisions made?",
+                      "Summarize the main points",
+                      "What was said about revenue?",
+                    ].map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        onClick={() => setQuestion(suggestion)}
+                        className="rounded-full border border-border bg-secondary/50 px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
+        </div>
+
+        {/* Right Panel: Filters */}
+        <div className="lg:col-span-1 space-y-4">
+          <Card>
+            <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 hover:bg-transparent font-semibold text-lg"
+                      >
+                        <Filter className="w-4 h-4 mr-2" />
+                        Filters
+                        {isFiltersOpen ? (
+                          <ChevronUp className="w-4 h-4 ml-2 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 ml-2 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                  {/* Clear Filters Button */}
+                  {(selectedMediaIds.length > 0 ||
+                    Object.keys(mediaTimeRanges).length > 0 ||
+                    topK[0] !== 3) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearFilters}
+                      className="h-8 px-2 text-xs"
+                    >
+                      <RotateCcw className="w-3 h-3 mr-1" />
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="space-y-6 pt-0">
+                  {/* Top K Slider */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <label className="text-sm font-medium">
+                        Results (Top K)
+                      </label>
+                      <span className="text-sm text-muted-foreground">
+                        {topK[0]}
+                      </span>
+                    </div>
+                    <Slider
+                      value={topK}
+                      onValueChange={setTopK}
+                      max={25}
+                      min={1}
+                      step={1}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Media Selection & Time Ranges */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">Source Media</label>
+                    {isMediaLoading ? (
+                      <div className="flex justify-center p-4">
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-[500px] pr-4">
+                        <div className="space-y-4">
+                          {mediaData?.items?.map((media) => {
+                            const isSelected = selectedMediaIds.includes(
+                              media.mediaId,
+                            );
+                            const range = mediaTimeRanges[media.mediaId];
+
+                            return (
+                              <div
+                                key={media.mediaId}
+                                className={cn(
+                                  "space-y-2 rounded-lg border p-3 transition-colors",
+                                  isSelected
+                                    ? "bg-muted/50 border-primary/20"
+                                    : "border-transparent hover:bg-muted/30",
+                                )}
+                              >
+                                <div className="flex items-start space-x-2">
+                                  <Checkbox
+                                    id={media.mediaId}
+                                    checked={isSelected}
+                                           }
+                                  />
+                                  <div className="grid gap-1.5 leading-none w-full">
+                                    <label
+                                      htmlFor={media.mediaId}
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer break-all"
+                                    >
+                                      {media.fileName || "Untitled Media"}
+                                    </label>
+                                    <p className="text-xs text-muted-foreground">
+                                      {media.model}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Per-media Time Range Selector */}
+                                {isSelected && (
+                                  <div className="pt-2 pl-6 animate-in slide-in-from-top-2 duration-200">
+                                    <TimeRangeSelector
+                                      duration={media.duration}
+                                      startSeconds={range?.start ?? 0}
+                                      endSeconds={range?.end ?? media.duration}
+                                      onChange={(s, e) =>
+                                        handleTimeRangeChange(
+                                          media.mediaId,
+                                          s,
+                                          e,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {!mediaData?.items?.length && (
+                            <div className="text-sm text-muted-foreground italic">
+                              No media found.
+                            </div>
+                          )}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </Card>
         </div>
       </div>
     </div>
   );
 }
 
-// Separate component for Source Item to handle its own collapsible state cleanly
+// Separate component for Source Item
 function SourceItem({
   source,
   formatTime,

@@ -34,16 +34,18 @@ export interface PaginatedTranscribedMediaResponse {
   totalItems: number;
 }
 
-export interface QueryFilters {
-  mediaIds: string[];
+export interface TimeRange {
+  mediaId: string;
   startSeconds?: number;
   endSeconds?: number;
 }
 
 export interface QueryRequest {
   question: string;
-  filters?: QueryFilters;
-  topK: number;
+  timeRanges?: TimeRange[];
+  topK?: number;
+  maxDistance?: number;
+  modelName?: string;
 }
 
 export interface QuerySource {

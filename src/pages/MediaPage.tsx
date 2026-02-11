@@ -126,7 +126,7 @@ export default function MediaPage() {
                   }
                   className={
                     isCompleted
-                      ? "bg-green-500 hover:bg-green-600 text-white"
+                      ? "bg-green-600 hover:bg-green-700 text-white"
                       : isProcessing
                         ? "bg-yellow-500/15 text-yellow-700 hover:bg-yellow-500/25 border-yellow-200"
                         : ""
@@ -185,15 +185,15 @@ export default function MediaPage() {
         <div className="md:col-span-2 space-y-6">
           <Card className="h-full flex flex-col">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                <span>Transcription</span>
-                <span className="ml-auto flex items-center gap-2 text-muted-foreground">
+              <CardTitle className="flex items-center gap-2 pb-1">
+                <FileText className="h-6 w-6" />
+                <span className="text-xl">Transcription</span>
+                <span className="ml-auto flex items-center gap-2 text-muted-foreground font-medium text-sm">
                   <Sparkles className="size-5" />
                   Model whisper {media.model?.toLowerCase()}
                 </span>
               </CardTitle>
-              <CardDescription className="truncate">
+              <CardDescription className="truncate pb-1">
                 {media.fileName}
               </CardDescription>
             </CardHeader>
@@ -232,7 +232,7 @@ export default function MediaPage() {
 
               {isCompleted && media.transcriptionText && (
                 <ScrollArea className="h-[500px] w-full rounded-md border p-4 bg-muted/10">
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap font-mono">
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap p-1 pb-8 font-mono">
                     {media.transcriptionText}
                   </div>
                 </ScrollArea>

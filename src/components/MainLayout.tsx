@@ -31,8 +31,8 @@ export default function MainLayout() {
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 border-b px-4 lg:h-[60px] lg:px-6">
             <NavLink to="/" className="flex h-16 items-center gap-2 ">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-                <Sparkles className="h-4 w-4 text-accent-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-accent">
+                <Sparkles className="h-5 w-5 text-primary" />
               </div>
               <span className="text-lg font-semibold text-sidebar-foreground">
                 MediaRAG
