@@ -7,11 +7,12 @@ import {
   Eye,
   AlertCircle,
   Upload,
+  CheckCircle2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAllMedia, useRefreshMediaStatus } from "../hooks/useMedia";
-import type { MediaItem } from "../api/types/models";
+import { type MediaItem, MediaStatus } from "../api/types/models";
 import { formatBytes, formatDuration, formatDate } from "../lib/formatters";
 
 import { Button } from "../components/ui/button";
@@ -143,31 +144,40 @@ function MediaCard({
   onRefreshStatus: (id: string) => void;
   isRefreshing: boolean;
 }) {
-  const status = String(media.status).toLowerCase();
-
-  const getStatusConfig = (status: string) => {
+  const getStatusConfig = (status: MediaStatus) => {
     switch (status) {
-      case "uploaded":
+      case MediaStatus.Uploaded:
         return { label: "Uploaded", variant: "secondary", icon: Upload };
-      case "processing":
+      case MediaStatus.TranscriptionProcessing:
         return {
-          label: "Processing",
+          label: "Transcribing",
           variant: "warning",
           icon: RefreshCw,
           animate: true,
         };
-      case "transcribed":
-        return { label: "Transcribed", variant: "success", icon: FileAudio }; // "success" might not be a valid variant in shadcn default, use "default" or "outline" + class
-      case "completed":
+      case MediaStatus.TranscriptionCompleted:
+        return {
+          label: "Transcribed",
+          variant: "success",
+          icon: FileAudio,
+        };
+      case MediaStatus.EmbeddingProcessing:
+        return {
+          label: "Embedding",
+          variant: "warning",
+          icon: RefreshCw,
+          animate: true,
+        };
+      case MediaStatus.Completed:
         return { label: "Completed", variant: "default", icon: FileAudio };
-      case "failed":
+      case MediaStatus.Failed:
         return { label: "Failed", variant: "destructive", icon: AlertCircle };
       default:
         return { label: status, variant: "outline", icon: FileAudio };
     }
   };
 
-  const config = getStatusConfig(status);
+  const config = getStatusConfig(media.status);
   const StatusIcon = config.icon;
 
   // Helper to map variant string to Badge props (handling custom ones if needed)
@@ -193,7 +203,8 @@ function MediaCard({
         <Badge
           variant={getBadgeVariant(config.variant)}
           className={
-            status === "transcribed"
+            media.status === MediaStatus.TranscriptionCompleted ||
+            media.status === MediaStatus.Completed
               ? "bg-green-500 hover:bg-green-600 text-white"
               : ""
           }
@@ -236,41 +247,73 @@ function MediaCard({
         </div>
       </CardContent>
       <CardFooter className="pt-2">
-        <div className="flex w-full gap-2">
-          {(status === "uploaded" || status === "processing") && (
-            <Button
-              variant="outline"
-              className="w-full"
-              size="sm"
-              onClick={() => onRefreshStatus(media.id)}
-              disabled={isRefreshing}
-            >
-              <RefreshCw
-                className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-              />
-              Check Status
-            </Button>
-          )}
+        <div className="flex flex-col w-full gap-3">
+          <div className="flex items-center justify-between">
+            {(media.status === MediaStatus.Uploaded ||
+              media.status === MediaStatus.TranscriptionProcessing ||
+              media.status === MediaStatus.EmbeddingProcessing) && (
+              <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-500 text-sm">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span>Processing...</span>
+              </div>
+            )}
+            {media.status === MediaStatus.Completed && (
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-500 text-sm">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Ready for search</span>
+              </div>
+            )}
+            {media.status === MediaStatus.Failed && (
+              <div className="flex items-center gap-2 text-destructive text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>Processing failed</span>
+              </div>
+            )}
+          </div>
 
-          {(status === "transcribed" || status === "completed") && (
-            <Button variant="default" className="w-full" size="sm" asChild>
-              <Link to={`/media/${media.id}`}>
-                <Eye className="mr-2 h-4 w-4" />
-                View
-              </Link>
-            </Button>
-          )}
+          <div className="flex w-full gap-2">
+            {(media.status === MediaStatus.Uploaded ||
+              media.status === MediaStatus.TranscriptionProcessing ||
+              media.status === MediaStatus.EmbeddingProcessing) && (
+              <Button
+                variant="outline"
+                className="w-full"
+                size="sm"
+                onClick={() => onRefreshStatus(media.id)}
+                disabled={isRefreshing}
+              >
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                Check Status
+              </Button>
+            )}
 
-          {status === "failed" && (
-            <Button
-              variant="ghost"
-              className="w-full text-destructive hover:text-destructive"
-              size="sm"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Retry
-            </Button>
-          )}
+            {(media.status === MediaStatus.TranscriptionCompleted ||
+              media.status === MediaStatus.Completed) && (
+              <Button variant="default" className="w-full" size="sm" asChild>
+                <Link to={`/media/${media.id}`}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View
+                </Link>
+              </Button>
+            )}
+
+            {media.status === MediaStatus.Failed && (
+              <Button
+                variant="ghost"
+                className="w-full text-destructive hover:text-destructive"
+                size="sm"
+                onClick={() => onRefreshStatus(media.id)}
+                disabled={isRefreshing}
+              >
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                Retry
+              </Button>
+            )}
+          </div>
         </div>
       </CardFooter>
     </Card>

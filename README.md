@@ -2,6 +2,8 @@
 
 Este é o frontend do sistema de Transcrição, Indexação Semântica e Busca baseada em RAG (Retrieval-Augmented Generation). A aplicação permite o upload de arquivos de mídia, visualização de transcrições e realização de buscas semânticas inteligentes sobre o conteúdo processado.
 
+Acesse o backend da aplicação [Clicando aqui](https://github.com/Brendon3578/MediaTranscriptKnowledgeRAG)
+
 ## 📌 Descrição do Projeto
 
 O sistema resolve o problema de busca e recuperação de informações em grandes volumes de conteúdo de áudio e vídeo. Em vez de depender apenas de palavras-chave, o sistema utiliza **IA local (Whisper + Ollama)** para transcrever e gerar embeddings vetoriais, permitindo consultas baseadas no significado do conteúdo.
@@ -96,7 +98,7 @@ flowchart TD
 1. Clone o repositório:
 
 ```bash
-git clone https://github.com/brendon3578/media-transcript-knowledge-rag-web.git
+git clone https://github.com/brendon3578/media-transcript-knowledge-web.git
 ```
 
 1. Instale as dependências:

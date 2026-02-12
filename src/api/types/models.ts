@@ -1,11 +1,22 @@
 export type UploadMediaResponse = void;
 
+export const MediaStatus = {
+  Uploaded: "Uploaded",
+  TranscriptionProcessing: "TranscriptionProcessing",
+  TranscriptionCompleted: "TranscriptionCompleted",
+  EmbeddingProcessing: "EmbeddingProcessing",
+  Completed: "Completed",
+  Failed: "Failed",
+} as const;
+
+export type MediaStatus = (typeof MediaStatus)[keyof typeof MediaStatus];
+
 export interface MediaItem {
   id: string;
   fileName: string;
   contentType: string;
   fileSizeBytes: number;
-  status: number | string;
+  status: MediaStatus;
   durationSeconds?: number;
   createdAt: string;
 }
@@ -15,7 +26,7 @@ export type GetAllMediaResponse = MediaItem[];
 export interface MediaStatusResponse {
   mediaId: string;
   fileName: string;
-  status: string;
+  status: MediaStatus;
   uploadedAt: string;
   updatedAt: string;
   model: string;
@@ -67,7 +78,7 @@ export interface TranscribedMediaDto {
   fileName?: string | null;
   mediaType?: string | null;
   duration: number;
-  status?: string | null;
+  status?: MediaStatus | null;
   transcriptionText?: string | null;
   createdAt?: string | null;
   model: string;

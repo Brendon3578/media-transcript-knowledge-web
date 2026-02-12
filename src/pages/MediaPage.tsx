@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { MediaStatus } from "../api/types/models";
 import {
   FileAudio,
   FileVideo,
@@ -71,12 +72,12 @@ export default function MediaPage() {
   }
 
   const isProcessing =
-    media.status?.toLowerCase() === "processing" ||
-    media.status?.toLowerCase() === "uploaded";
-  const isFailed = media.status?.toLowerCase() === "failed";
-  const isCompleted =
-    media.status?.toLowerCase() === "completed" ||
-    media.status?.toLowerCase() === "transcribed";
+    media.status === MediaStatus.Uploaded ||
+    media.status === MediaStatus.TranscriptionProcessing ||
+    media.status === MediaStatus.TranscriptionCompleted ||
+    media.status === MediaStatus.EmbeddingProcessing;
+  const isFailed = media.status === MediaStatus.Failed;
+  const isCompleted = media.status === MediaStatus.Completed;
 
   const isVideo = media.mediaType?.toLowerCase().includes("video");
 
