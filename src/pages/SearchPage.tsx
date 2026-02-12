@@ -98,7 +98,17 @@ export default function SearchPage() {
 
     if (selectedMediaIds.length > 0) {
       selectedMediaIds.forEach((id) => {
-        const range = mediaTimeRanges[id];
+        // Always check for existing range or try to find media to get duration
+        let range = mediaTimeRanges[id];
+
+        // If no range in state (edge case), try to default to full duration if we have the media data
+        if (!range && mediaData?.items) {
+          const media = mediaData.items.find((m) => m.mediaId === id);
+          if (media) {
+            range = { start: 0, end: media.duration };
+          }
+        }
+
         if (range) {
           timeRanges.push({
             mediaId: id,
@@ -106,6 +116,7 @@ export default function SearchPage() {
             endSeconds: range.end,
           });
         } else {
+          // Fallback if we absolutely can't find a range (shouldn't happen with correct flow)
           timeRanges.push({ mediaId: id });
         }
       });
@@ -121,8 +132,6 @@ export default function SearchPage() {
     }
 
     console.log(request);
-
-    return;
 
     setActiveRequest(request);
   };
@@ -140,10 +149,20 @@ export default function SearchPage() {
     setTopK([3]);
   };
 
-  const toggleMediaSelection = (id: string) => {
-    setSelectedMediaIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
+  const toggleMediaSelection = (id: string, duration: number) => {
+    setSelectedMediaIds((prev) => {
+      const isSelected = prev.includes(id);
+      if (isSelected) {
+        return prev.filter((item) => item !== id);
+      } else {
+        // Initialize full duration range when selecting
+        setMediaTimeRanges((ranges) => ({
+          ...ranges,
+          [id]: { start: 0, end: duration },
+        }));
+        return [...prev, id];
+      }
+    });
   };
 
   const handleTimeRangeChange = (
@@ -260,7 +279,7 @@ export default function SearchPage() {
                         {searchResults.sources.length}
                       </Badge>
                     </h3>
-                    <div className="grid gap-4">
+                    <div className="grid gap-2">
                       {searchResults.sources.map((source, index) => (
                         <SourceItem
                           key={`${source.mediaId}-${index}`}
@@ -383,7 +402,10 @@ export default function SearchPage() {
                             const isSelected = selectedMediaIds.includes(
                               media.mediaId,
                             );
-                            const range = mediaTimeRanges[media.mediaId];
+                            const range = mediaTimeRanges[media.mediaId] ?? {
+                              start: 0,
+                              end: media.duration,
+                            };
 
                             return (
                               <div
@@ -399,7 +421,12 @@ export default function SearchPage() {
                                   <Checkbox
                                     id={media.mediaId}
                                     checked={isSelected}
-                                           }
+                                    onCheckedChange={() =>
+                                      toggleMediaSelection(
+                                        media.mediaId,
+                                        media.duration,
+                                      )
+                                    }
                                   />
                                   <div className="grid gap-1.5 leading-none w-full">
                                     <label
@@ -465,7 +492,7 @@ function SourceItem({
 
   return (
     <Card className="overflow-hidden border-l-4 border-l-primary/40">
-      <div className="p-4 flex items-start gap-4">
+      <div className="p-4 py-0 flex items-start gap-4">
         <div className="p-2 bg-secondary rounded-md">
           <FileAudio className="w-5 h-5 text-secondary-foreground" />
         </div>
