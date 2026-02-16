@@ -25,6 +25,7 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { MediaProcessingStatusCard } from "@/components/media/MediaProcessingStatusCard";
 
 export default function MediaPage() {
   const { id } = useParams<{ id: string }>();
@@ -102,6 +103,16 @@ export default function MediaPage() {
           Refresh
         </Button>
       </div>
+
+      {!isCompleted && (
+        <MediaProcessingStatusCard
+          mediaId={id!}
+          onComplete={() => {
+            // Refetch media details when processing completes
+            refetch();
+          }}
+        />
+      )}
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Metadata Card */}

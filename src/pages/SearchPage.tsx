@@ -90,6 +90,11 @@ export default function SearchPage() {
     retry: false,
   });
 
+  const selectedMediaNotCompleted = selectedMediaIds.some((id) => {
+    const media = mediaData?.items?.find((m) => m.mediaId === id);
+    return media && media.status !== "Completed";
+  });
+
   // --- Handlers ---
   const handleSearch = () => {
     if (!question.trim()) return;
@@ -208,10 +213,17 @@ export default function SearchPage() {
               onKeyDown={handleKeyDown}
               disabled={isSearching}
             />
-            <div className="absolute bottom-4 right-4">
+            <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
+              {selectedMediaNotCompleted && (
+                <span className="text-xs text-destructive font-medium animate-pulse">
+                  Some selected media are still processing...
+                </span>
+              )}
               <Button
                 onClick={handleSearch}
-                disabled={!question.trim() || isSearching}
+                disabled={
+                  !question.trim() || isSearching || selectedMediaNotCompleted
+                }
                 className="gap-2"
               >
                 {isSearching ? (

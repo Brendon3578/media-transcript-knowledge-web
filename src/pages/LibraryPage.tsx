@@ -275,18 +275,19 @@ function MediaCard({
             {(media.status === MediaStatus.Uploaded ||
               media.status === MediaStatus.TranscriptionProcessing ||
               media.status === MediaStatus.EmbeddingProcessing) && (
-              <Button
-                variant="outline"
-                className="w-full"
-                size="sm"
-                onClick={() => onRefreshStatus(media.id)}
-                disabled={isRefreshing}
-              >
-                <RefreshCw
-                  className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-                />
-                Check Status
-              </Button>
+              <Link to={`/media/${media.id}`} className="w-full group">
+                <Button
+                  variant="outline"
+                  className="w-full cursor-pointer"
+                  size="sm"
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 parent group-hover:animate-spin`}
+                  />
+                  Check Status
+                </Button>
+              </Link>
             )}
 
             {(media.status === MediaStatus.TranscriptionCompleted ||
