@@ -13,6 +13,7 @@ import {
   getTranscribedMediaById,
   getTranscriptionMediaStatus,
   getUploadStatus,
+  deleteMedia,
 } from "../api/endpoints/uploadEndpoint";
 import {
   type UploadMediaRequest,
@@ -114,6 +115,23 @@ export const useTranscribedMedia = (
     queryKey: mediaKeys.transcribed(params),
     queryFn: () => getTranscribedMedia(params),
     placeholderData: keepPreviousData,
+    ...options,
+  });
+};
+
+export const useDeleteMedia = (
+  options?: UseMutationOptions<void, Error, string>,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (mediaId: string) => {
+      await deleteMedia(mediaId);
+    },
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: mediaKeys.all });
+      options?.onSuccess?.(...args);
+    },
     ...options,
   });
 };

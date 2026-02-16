@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { MediaStatus } from "../api/types/models";
 import {
   FileAudio,
@@ -10,8 +10,10 @@ import {
   AlertCircle,
   FileText,
   Sparkles,
+  Loader2,
 } from "lucide-react";
-import { useTranscribedMediaById } from "../hooks/useMedia";
+import { toast } from "sonner";
+import { useDeleteMedia, useTranscribedMediaById } from "../hooks/useMedia";
 import { formatDuration, formatDate } from "../lib/formatters";
 import { Button } from "../components/ui/button";
 import {
@@ -26,9 +28,22 @@ import { Separator } from "../components/ui/separator";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { MediaProcessingStatusCard } from "@/components/media/MediaProcessingStatusCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../components/ui/alert-dialog";
 
 export default function MediaPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const deleteMediaMutation = useDeleteMedia();
   const {
     data: media,
     isLoading,
@@ -82,26 +97,81 @@ export default function MediaPage() {
 
   const isVideo = media.mediaType?.toLowerCase().includes("video");
 
+  const handleConfirmDelete = async () => {
+    if (!id) return;
+    try {
+      await deleteMediaMutation.mutateAsync(id);
+      toast.success("Media deleted successfully");
+      navigate("/library");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete media";
+      toast.error(message);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <Button variant="ghost" asChild>
           <Link to="/library">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Library
           </Link>
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isRefetching}
-        >
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${isRefetching ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isRefetching || deleteMediaMutation.isPending}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${
+                isRefetching ? "animate-spin" : ""
+              }`}
+            />
+            Refresh
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={deleteMediaMutation.isPending}
+              >
+                {deleteMediaMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Delete Media
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent size="sm">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete media</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete
+                  this media and its transcription.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleteMediaMutation.isPending}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  onClick={handleConfirmDelete}
+                  disabled={deleteMediaMutation.isPending}
+                >
+                  {deleteMediaMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       {!isCompleted && (

@@ -86,3 +86,12 @@ export async function getTranscriptionMediaStatus(
   );
   return data;
 }
+
+/**
+ * Deletes a media item by id.
+ * DELETE /api/Media/{mediaId}
+ */
+export const deleteMedia = async (mediaId: string): Promise<void> => {
+  const response = await uploadApi.delete(`/Media/${mediaId}`);
+  return response.data;
+};
