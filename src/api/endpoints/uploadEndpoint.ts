@@ -6,6 +6,7 @@ import type {
   MediaStatusResponse,
   GetAllMediaResponse,
   TranscribedMediaDto,
+  MediaTranscriptionStatusResponse,
 } from "../types/models";
 
 /**
@@ -72,3 +73,16 @@ export const getTranscribedMedia = async (
 
   return response.data;
 };
+
+/**
+ * Gets media with current status (transcription status and embedding status).
+ * GET /api/Upload/media/{id}/status
+ */
+export async function getTranscriptionMediaStatus(
+  mediaId: string,
+): Promise<MediaTranscriptionStatusResponse> {
+  const { data } = await uploadApi.get<MediaTranscriptionStatusResponse>(
+    `/media/${mediaId}/transcription-status`,
+  );
+  return data;
+}

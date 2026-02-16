@@ -9,14 +9,14 @@ export const MediaStatus = {
   Failed: "Failed",
 } as const;
 
-export type MediaStatus = (typeof MediaStatus)[keyof typeof MediaStatus];
+export type MediaStatusType = (typeof MediaStatus)[keyof typeof MediaStatus];
 
 export interface MediaItem {
   id: string;
   fileName: string;
   contentType: string;
   fileSizeBytes: number;
-  status: MediaStatus;
+  status: MediaStatusType;
   durationSeconds?: number;
   createdAt: string;
 }
@@ -26,7 +26,7 @@ export type GetAllMediaResponse = MediaItem[];
 export interface MediaStatusResponse {
   mediaId: string;
   fileName: string;
-  status: MediaStatus;
+  status: MediaStatusType;
   uploadedAt: string;
   updatedAt: string;
   model: string;
@@ -78,7 +78,7 @@ export interface TranscribedMediaDto {
   fileName?: string | null;
   mediaType?: string | null;
   duration: number;
-  status?: MediaStatus | null;
+  status?: MediaStatusType | null;
   transcriptionText?: string | null;
   createdAt?: string | null;
   model: string;
@@ -99,4 +99,11 @@ export interface UploadMediaRequest {
 export interface GetTranscribedMediaRequest {
   page?: number;
   pageSize?: number;
+}
+
+export interface MediaTranscriptionStatusResponse {
+  mediaId: string;
+  status: MediaStatusType | null;
+  transcriptionProgress: number;
+  embeddingProgress: number;
 }

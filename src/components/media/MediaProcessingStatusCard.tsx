@@ -1,5 +1,4 @@
 import React from "react";
-import { useMediaStatus } from "@/hooks/useMediaStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,6 +9,7 @@ import {
   Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranscriptionMediaStatus } from "../../hooks/useMedia";
 
 interface MediaProcessingStatusCardProps {
   mediaId: string;
@@ -19,7 +19,7 @@ interface MediaProcessingStatusCardProps {
 export const MediaProcessingStatusCard: React.FC<
   MediaProcessingStatusCardProps
 > = ({ mediaId, onComplete }) => {
-  const { data, isLoading, isError, isFetching } = useMediaStatus(
+  const { data, isLoading, isError, isFetching } = useTranscriptionMediaStatus(
     mediaId,
     onComplete,
   );
@@ -75,12 +75,12 @@ export const MediaProcessingStatusCard: React.FC<
   if (status === "Uploaded") {
     displayTranscriptionProgress = 0;
     displayEmbeddingProgress = 0;
-  } else if (status === "Transcribing") {
+  } else if (status === "TranscriptionProcessing") {
     displayEmbeddingProgress = 0;
   } else if (status === "TranscriptionCompleted") {
     displayTranscriptionProgress = 100;
     displayEmbeddingProgress = 0;
-  } else if (status === "Embedding") {
+  } else if (status === "EmbeddingProcessing") {
     displayTranscriptionProgress = 100;
   } else if (status === "Completed") {
     displayTranscriptionProgress = 100;

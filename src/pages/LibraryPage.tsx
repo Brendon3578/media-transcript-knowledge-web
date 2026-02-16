@@ -9,10 +9,13 @@ import {
   Upload,
   CheckCircle2,
 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { useAllMedia, useRefreshMediaStatus } from "../hooks/useMedia";
-import { type MediaItem, MediaStatus } from "../api/types/models";
+import {
+  type MediaItem,
+  MediaStatus,
+  type MediaStatusType,
+} from "../api/types/models";
 import { formatBytes, formatDuration, formatDate } from "../lib/formatters";
 
 import { Button } from "../components/ui/button";
@@ -144,7 +147,7 @@ function MediaCard({
   onRefreshStatus: (id: string) => void;
   isRefreshing: boolean;
 }) {
-  const getStatusConfig = (status: MediaStatus) => {
+  const getStatusConfig = (status: MediaStatusType) => {
     switch (status) {
       case MediaStatus.Uploaded:
         return { label: "Uploaded", variant: "secondary", icon: Upload };

@@ -8,18 +8,20 @@ import {
 } from "@tanstack/react-query";
 import {
   uploadMedia,
-  getUploadStatus,
   getAllMedia,
   getTranscribedMedia,
   getTranscribedMediaById,
+  getTranscriptionMediaStatus,
+  getUploadStatus,
 } from "../api/endpoints/uploadEndpoint";
-import type {
-  UploadMediaRequest,
-  MediaStatusResponse,
-  GetAllMediaResponse,
-  GetTranscribedMediaRequest,
-  TranscribedMediaDtoPagedResponseDto,
-  TranscribedMediaDto,
+import {
+  type UploadMediaRequest,
+  type GetAllMediaResponse,
+  type GetTranscribedMediaRequest,
+  type TranscribedMediaDtoPagedResponseDto,
+  type TranscribedMediaDto,
+  type MediaTranscriptionStatusResponse,
+  MediaStatus,
 } from "../api/types/models";
 
 export const mediaKeys = {
@@ -88,28 +90,6 @@ export const useRefreshMediaStatus = () => {
   });
 };
 
-export const useUploadStatus = (
-  id: string,
-  options?: Omit<
-    UseQueryOptions<MediaStatusResponse, Error>,
-    "queryKey" | "queryFn"
-  >,
-) => {
-  return useQuery({
-    queryKey: mediaKeys.status(id),
-    queryFn: () => getUploadStatus(id),
-    enabled: !!id,
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (data?.status === "transcribed" || data?.status === "failed") {
-        return false;
-      }
-      return 1000;
-    },
-    ...options,
-  });
-};
-
 export const useAllMedia = (
   options?: Omit<
     UseQueryOptions<GetAllMediaResponse, Error>,
@@ -137,3 +117,29 @@ export const useTranscribedMedia = (
     ...options,
   });
 };
+
+export function useTranscriptionMediaStatus(
+  mediaId: string,
+  onComplete?: () => void,
+) {
+  return useQuery<MediaTranscriptionStatusResponse>({
+    queryKey: ["mediaStatus", mediaId],
+    queryFn: () => getTranscriptionMediaStatus(mediaId),
+    enabled: !!mediaId,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return 2000;
+
+      const isFinished =
+        data.status === MediaStatus.Completed ||
+        data.status === MediaStatus.Failed;
+
+      if (isFinished && data.status === MediaStatus.Completed) {
+        onComplete?.();
+      }
+
+      return isFinished ? false : 2000;
+    },
+    placeholderData: keepPreviousData,
+  });
+}
