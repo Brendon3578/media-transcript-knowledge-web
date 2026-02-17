@@ -3,10 +3,10 @@ import axios from "axios";
 const queryApiEnv = import.meta.env.VITE_QUERY_API_URL;
 const uploadApiEnv = import.meta.env.VITE_UPLOAD_API_URL;
 
-const QUERY_API_URL = queryApiEnv
+export const QUERY_API_URL = queryApiEnv
   ? `${queryApiEnv}/api`
   : "http://localhost:3000";
-const UPLOAD_API_URL = uploadApiEnv
+export const UPLOAD_API_URL = uploadApiEnv
   ? `${uploadApiEnv}/api`
   : "http://localhost:3000";
 

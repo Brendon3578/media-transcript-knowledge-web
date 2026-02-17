@@ -1,5 +1,3 @@
-export type UploadMediaResponse = void;
-
 export const MediaStatus = {
   Uploaded: "Uploaded",
   TranscriptionProcessing: "TranscriptionProcessing",

@@ -41,11 +41,26 @@ export default function LibraryPage() {
     refetch,
     isFetching,
   } = useAllMedia({
-    refetchInterval: 1000 * 60 * 30, // Poll every 30 minutos
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data || data.length === 0) {
+        return false;
+      }
+
+      const hasProcessingMedia = data.some((item) => {
+        return (
+          item.status === MediaStatus.Uploaded ||
+          item.status === MediaStatus.TranscriptionProcessing ||
+          item.status === MediaStatus.TranscriptionCompleted ||
+          item.status === MediaStatus.EmbeddingProcessing
+        );
+      });
+
+      return hasProcessingMedia ? 5000 : false;
+    },
   });
 
-  const { mutate: refreshStatus, isPending: isRefreshingStatus } =
-    useRefreshMediaStatus();
+  const { mutate: refreshStatus } = useRefreshMediaStatus();
 
   // Track which item is currently refreshing to show spinner only for that item
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
@@ -183,15 +198,20 @@ function MediaCard({
   const config = getStatusConfig(media.status);
   const StatusIcon = config.icon;
 
-  // Helper to map variant string to Badge props (handling custom ones if needed)
-
   const getBadgeVariant = (v: string): badgeVariantClassType => {
     if (["default", "secondary", "destructive", "outline"].includes(v))
       return v as badgeVariantClassType;
-    return "secondary"; // Fallback
+    return "secondary";
   };
 
   const isVideo = media.contentType?.startsWith("video");
+  const isUploaded = media.status === MediaStatus.Uploaded;
+  const isProcessingButViewable =
+    media.status === MediaStatus.TranscriptionProcessing ||
+    media.status === MediaStatus.TranscriptionCompleted ||
+    media.status === MediaStatus.EmbeddingProcessing;
+  const isCompleted = media.status === MediaStatus.Completed;
+  const isFailed = media.status === MediaStatus.Failed;
 
   return (
     <Card className="flex flex-col h-full">
@@ -252,21 +272,25 @@ function MediaCard({
       <CardFooter className="pt-2">
         <div className="flex flex-col w-full gap-3">
           <div className="flex items-center justify-between">
-            {(media.status === MediaStatus.Uploaded ||
-              media.status === MediaStatus.TranscriptionProcessing ||
-              media.status === MediaStatus.EmbeddingProcessing) && (
+            {isUploaded && (
+              <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-500 text-sm">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span>Waiting for processing</span>
+              </div>
+            )}
+            {isProcessingButViewable && (
               <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-500 text-sm">
                 <RefreshCw className="h-4 w-4 animate-spin" />
                 <span>Processing...</span>
               </div>
             )}
-            {media.status === MediaStatus.Completed && (
+            {isCompleted && (
               <div className="flex items-center gap-2 text-green-600 dark:text-green-500 text-sm">
                 <CheckCircle2 className="h-4 w-4" />
                 <span>Ready for search</span>
               </div>
             )}
-            {media.status === MediaStatus.Failed && (
+            {isFailed && (
               <div className="flex items-center gap-2 text-destructive text-sm">
                 <AlertCircle className="h-4 w-4" />
                 <span>Processing failed</span>
@@ -275,47 +299,52 @@ function MediaCard({
           </div>
 
           <div className="flex w-full gap-2">
-            {(media.status === MediaStatus.Uploaded ||
-              media.status === MediaStatus.TranscriptionProcessing ||
-              media.status === MediaStatus.EmbeddingProcessing) && (
-              <Link to={`/media/${media.id}`} className="w-full group">
-                <Button
-                  variant="outline"
-                  className="w-full cursor-pointer"
-                  size="sm"
-                  disabled={isRefreshing}
-                >
-                  <RefreshCw
-                    className={`mr-2 h-4 w-4 parent group-hover:animate-spin`}
-                  />
-                  Check Status
-                </Button>
-              </Link>
+            {isUploaded && (
+              <Button variant="outline" className="w-full" size="sm" disabled>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Waiting for processing
+              </Button>
             )}
 
-            {(media.status === MediaStatus.TranscriptionCompleted ||
-              media.status === MediaStatus.Completed) && (
-              <Button variant="default" className="w-full" size="sm" asChild>
+            {isProcessingButViewable && (
+              <Button variant="outline" className="w-full" size="sm" asChild>
                 <Link to={`/media/${media.id}`}>
                   <Eye className="mr-2 h-4 w-4" />
-                  View
+                  View progress
                 </Link>
               </Button>
             )}
 
-            {media.status === MediaStatus.Failed && (
-              <Button
-                variant="ghost"
-                className="w-full text-destructive hover:text-destructive"
-                size="sm"
-                onClick={() => onRefreshStatus(media.id)}
-                disabled={isRefreshing}
-              >
-                <RefreshCw
-                  className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-                />
-                Retry
+            {isCompleted && (
+              <Button variant="default" className="w-full" size="sm" asChild>
+                <Link to={`/media/${media.id}`}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Open media
+                </Link>
               </Button>
+            )}
+
+            {isFailed && (
+              <>
+                <Button variant="outline" className="w-full" size="sm" asChild>
+                  <Link to={`/media/${media.id}`}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View details
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full text-destructive hover:text-destructive"
+                  size="sm"
+                  onClick={() => onRefreshStatus(media.id)}
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                  />
+                  Retry
+                </Button>
+              </>
             )}
           </div>
         </div>

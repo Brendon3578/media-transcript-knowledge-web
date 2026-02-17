@@ -28,6 +28,7 @@ import { Separator } from "../components/ui/separator";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { MediaProcessingStatusCard } from "@/components/media/MediaProcessingStatusCard";
+import { useTranscriptionStream } from "../hooks/useTranscriptionStream";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,8 @@ export default function MediaPage() {
     refetch,
     isRefetching,
   } = useTranscribedMediaById(id!);
+
+  const { fullText, status: streamStatus } = useTranscriptionStream(id);
 
   if (isLoading) {
     return (
@@ -281,14 +284,48 @@ export default function MediaPage() {
             </CardHeader>
             <CardContent className="flex-1 min-h-[400px]">
               {isProcessing && (
-                <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-4 bg-muted/30 rounded-lg border border-dashed">
-                  <RefreshCw className="h-10 w-10 animate-spin text-muted-foreground" />
-                  <div className="space-y-1">
-                    <h3 className="font-semibold">Processing Media</h3>
-                    <p className="text-sm text-muted-foreground max-w-xs">
-                      Your media is currently being transcribed. This may take a
-                      few minutes depending on the file duration.
-                    </p>
+                <div className="flex flex-col gap-4 h-full">
+                  <div className="flex flex-col items-center justify-center flex-1 p-8 text-center space-y-4 bg-muted/30 rounded-lg border border-dashed">
+                    <RefreshCw className="h-10 w-10 animate-spin text-muted-foreground" />
+                    <div className="space-y-1">
+                      <h3 className="font-semibold">Processing Media</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                        Your media is currently being transcribed. This may take
+                        a few minutes depending on the file duration.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Live transcription
+                      </span>
+                      {streamStatus === "streaming" && (
+                        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Receiving segments...
+                        </span>
+                      )}
+                      {streamStatus === "completed" && (
+                        <span className="text-xs text-muted-foreground">
+                          Streaming completed
+                        </span>
+                      )}
+                      {streamStatus === "error" && (
+                        <span className="text-xs text-destructive">
+                          Streaming error
+                        </span>
+                      )}
+                    </div>
+
+                    <ScrollArea className="h-[260px] w-full rounded-md border p-4 bg-muted/10">
+                      <div className="text-sm leading-relaxed whitespace-pre-wrap p-1 pb-8 font-mono">
+                        {fullText.length > 0
+                          ? fullText
+                          : "Waiting for transcription segments..."}
+                      </div>
+                    </ScrollArea>
                   </div>
                 </div>
               )}
