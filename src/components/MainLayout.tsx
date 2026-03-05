@@ -1,6 +1,7 @@
 import { Upload, Library, Search, Sparkles } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
 
 const navItems = [
   {
@@ -77,6 +78,7 @@ export default function MainLayout() {
           <Outlet />
         </div>
       </main>
+      <Toaster richColors position="top-right" />
     </div>
   );
 }

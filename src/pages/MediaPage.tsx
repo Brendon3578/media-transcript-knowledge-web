@@ -13,7 +13,11 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useDeleteMedia, useTranscribedMediaById } from "../hooks/useMedia";
+import {
+  useDeleteMedia,
+  useTranscribedMediaById,
+  useTranscriptionMediaStatus,
+} from "../hooks/useMedia";
 import { formatDuration, formatDate } from "../lib/formatters";
 import { Button } from "../components/ui/button";
 import {
@@ -46,27 +50,44 @@ export default function MediaPage() {
   const navigate = useNavigate();
   const deleteMediaMutation = useDeleteMedia();
   const {
+    data: statusData,
+    isLoading: statusLoading,
+    isError: statusError,
+  } = useTranscriptionMediaStatus(id!);
+
+  const currentStatus = statusData?.status ?? null;
+  const streamEnabled =
+    !!currentStatus &&
+    currentStatus !== MediaStatus.Completed &&
+    currentStatus !== MediaStatus.Failed;
+  const completedEnabled = currentStatus === MediaStatus.Completed;
+
+  const {
     data: media,
-    isLoading,
-    isError,
+    isLoading: mediaLoading,
+    isError: mediaError,
     refetch,
     isRefetching,
-  } = useTranscribedMediaById(id!);
+  } = useTranscribedMediaById(id!, {
+    enabled: completedEnabled,
+  });
 
-  const { fullText, status: streamStatus } = useTranscriptionStream(id);
+  const { fullText, status: streamStatus } = useTranscriptionStream(
+    streamEnabled ? id : undefined,
+  );
 
-  if (isLoading) {
+  if (statusLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-4">
           <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading media details...</p>
+          <p className="text-muted-foreground">Loading media status...</p>
         </div>
       </div>
     );
   }
 
-  if (isError || !media) {
+  if (statusError) {
     return (
       <div className="container mx-auto p-6 max-w-4xl">
         <Button variant="ghost" className="mb-6" asChild>
@@ -79,26 +100,19 @@ export default function MediaPage() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
-            Failed to load media details. The media might not exist or the
-            server is unreachable.
+            Failed to load media status. The media might not exist or the server
+            is unreachable.
           </AlertDescription>
         </Alert>
-        <div className="mt-4">
-          <Button onClick={() => refetch()}>Try Again</Button>
-        </div>
       </div>
     );
   }
 
-  const isProcessing =
-    media.status === MediaStatus.Uploaded ||
-    media.status === MediaStatus.TranscriptionProcessing ||
-    media.status === MediaStatus.TranscriptionCompleted ||
-    media.status === MediaStatus.EmbeddingProcessing;
-  const isFailed = media.status === MediaStatus.Failed;
-  const isCompleted = media.status === MediaStatus.Completed;
+  const isCompleted = completedEnabled;
+  const isFailed = currentStatus === MediaStatus.Failed;
+  const isProcessing = streamEnabled;
 
-  const isVideo = media.mediaType?.toLowerCase().includes("video");
+  const isVideo = media?.mediaType?.toLowerCase().includes("video") ?? false;
 
   const handleConfirmDelete = async () => {
     if (!id) return;
@@ -130,9 +144,7 @@ export default function MediaPage() {
             disabled={isRefetching || deleteMediaMutation.isPending}
           >
             <RefreshCw
-              className={`mr-2 h-4 w-4 ${
-                isRefetching ? "animate-spin" : ""
-              }`}
+              className={`mr-2 h-4 w-4 ${isRefetching ? "animate-spin" : ""}`}
             />
             Refresh
           </Button>
@@ -188,83 +200,68 @@ export default function MediaPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Metadata Card */}
-        <Card className="md:col-span-1 h-fit">
-          <CardHeader>
-            <CardTitle className="text-lg">Metadata</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                Status
-              </span>
-              <div>
-                <Badge
-                  variant={
-                    isCompleted
-                      ? "default" // success-like if available, or just default
-                      : isProcessing
-                        ? "secondary" // warning-like
-                        : isFailed
-                          ? "destructive"
-                          : "outline"
-                  }
-                  className={
-                    isCompleted
-                      ? "bg-green-600 hover:bg-green-700 text-white"
-                      : isProcessing
-                        ? "bg-yellow-500/15 text-yellow-700 hover:bg-yellow-500/25 border-yellow-200"
-                        : ""
-                  }
-                >
-                  {media.status}
-                </Badge>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                Type
-              </span>
-              <div className="flex items-center gap-2">
-                {isVideo ? (
-                  <FileVideo className="h-4 w-4" />
-                ) : (
-                  <FileAudio className="h-4 w-4" />
-                )}
-                <span className="text-sm font-medium">
-                  {media.mediaType || "Unknown"}
+        {/* Metadata Card (only when completed and data available) */}
+        {isCompleted && media && (
+          <Card className="md:col-span-1 h-fit">
+            <CardHeader>
+              <CardTitle className="text-lg">Metadata</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Status
                 </span>
+                <div>
+                  <Badge className="bg-green-600 hover:bg-green-700 text-white">
+                    {media.status}
+                  </Badge>
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                Duration
-              </span>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  {formatDuration(media.duration)}
-                </span>
-              </div>
-            </div>
+              <Separator />
 
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                Uploaded
-              </span>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  {formatDate(media.createdAt || new Date().toISOString())}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Type
                 </span>
+                <div className="flex items-center gap-2">
+                  {isVideo ? (
+                    <FileVideo className="h-4 w-4" />
+                  ) : (
+                    <FileAudio className="h-4 w-4" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {media.mediaType || "Unknown"}
+                  </span>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Duration
+                </span>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    {formatDuration(media.duration)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Uploaded
+                </span>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    {formatDate(media.createdAt || new Date().toISOString())}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Transcription Content */}
         <div className="md:col-span-2 space-y-6">
@@ -275,11 +272,11 @@ export default function MediaPage() {
                 <span className="text-xl">Transcription</span>
                 <span className="ml-auto flex items-center gap-2 text-muted-foreground font-medium text-sm">
                   <Sparkles className="size-5" />
-                  Model whisper {media.model?.toLowerCase()}
+                  Model whisper {media?.model?.toLowerCase()}
                 </span>
               </CardTitle>
               <CardDescription className="truncate pb-1">
-                {media.fileName}
+                {media?.fileName}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-[400px]">
@@ -341,7 +338,29 @@ export default function MediaPage() {
                 </Alert>
               )}
 
-              {isCompleted && !media.transcriptionText && (
+              {isCompleted && completedEnabled && mediaLoading && (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-4 bg-muted/30 rounded-lg border border-dashed">
+                  <RefreshCw className="h-10 w-10 animate-spin text-muted-foreground" />
+                  <div className="space-y-1">
+                    <h3 className="font-semibold">Loading Transcription</h3>
+                    <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                      Fetching completed transcription...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {isCompleted && (mediaError || !media) && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>
+                    Failed to load transcription details.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {isCompleted && media && !media.transcriptionText && (
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-2 bg-muted/30 rounded-lg border border-dashed">
                   <p className="text-muted-foreground">
                     No transcription text available.
@@ -349,7 +368,7 @@ export default function MediaPage() {
                 </div>
               )}
 
-              {isCompleted && media.transcriptionText && (
+              {isCompleted && media && media.transcriptionText && (
                 <ScrollArea className="h-[500px] w-full rounded-md border p-4 bg-muted/10">
                   <div className="text-sm leading-relaxed whitespace-pre-wrap p-1 pb-8 font-mono">
                     {media.transcriptionText}

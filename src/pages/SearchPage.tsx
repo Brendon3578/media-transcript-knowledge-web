@@ -252,9 +252,7 @@ export default function SearchPage() {
                   <div className="text-center">
                     <h3 className="font-semibold text-lg">Search Failed</h3>
                     <p className="text-muted-foreground max-w-sm mx-auto mt-1">
-                      {error instanceof Error
-                        ? error.message
-                        : "An unexpected error occurred."}
+                      Please try again. If the issue persists, check your inputs.
                     </p>
                   </div>
                   <Button variant="outline" onClick={() => refetch()}>

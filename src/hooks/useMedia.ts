@@ -158,6 +158,8 @@ export function useTranscriptionMediaStatus(
 
       return isFinished ? false : 2000;
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
   });
 }

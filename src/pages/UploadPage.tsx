@@ -45,7 +45,8 @@ const TRANSCRIPTION_MODELS = [
   { value: "small", label: "Whisper Small" },
   { value: "base", label: "Whisper Base" },
   { value: "medium", label: "Whisper Medium" },
-  { value: "large", label: "Whisper Large" },
+  { value: "largev1", label: "Whisper Large v1" },
+  { value: "largev3turbo", label: "Whisper Large Turbo" },
 ];
 
 export default function UploadPage() {
@@ -120,7 +121,6 @@ export default function UploadPage() {
       );
       toast.success(`Uploaded ${fileItem.file.name}`);
     } catch (error) {
-      console.error("Upload error:", error);
       // Update status to error
       setFiles((prev) =>
         prev.map((f) =>
@@ -128,12 +128,16 @@ export default function UploadPage() {
             ? {
                 ...f,
                 status: "error",
-                error: error instanceof Error ? error.message : "Upload failed",
+                error: undefined,
               }
             : f,
         ),
       );
-      toast.error(`Failed to upload ${fileItem.file.name}`);
+      const message =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "An unexpected error occurred.";
+      toast.error(message);
     }
   };
 
@@ -304,12 +308,7 @@ export default function UploadPage() {
                     </div>
                   </div>
 
-                  {/* Error Message Display */}
-                  {item.status === "error" && item.error && (
-                    <div className="absolute bottom-1 right-4 text-[10px] text-destructive">
-                      {item.error}
-                    </div>
-                  )}
+                  {/* Error Message Display removed; errors are shown via toast */}
                 </div>
               ))}
             </CardContent>
